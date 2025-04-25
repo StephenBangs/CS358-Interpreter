@@ -3,95 +3,101 @@
 #Dr. Yao Li - CS358
 #Milestone 1 - Interpreter Implementation Project
 
-#literals
+# interp.py (Milestone 1, dataclass version)
 
+from dataclasses import dataclass
+
+# --- Expression Types ---
+
+@dataclass
 class Lit:
-    def __init__(self, value):
-        self.value = value
+    value: int | bool
 
+@dataclass
 class Add:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Sub:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Mul:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Div:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Neg:
-    def __init__(self, expr):
-        self.expr = expr
+    expr: 'Expr'
 
+@dataclass
 class And:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Or:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Not:
-    def __init__(self, expr):
-        self.expr = expr
+    expr: 'Expr'
 
+@dataclass
 class Let:
-    def __init__(self, name, value_expr, body_expr):
-        self.name = name
-        self.value_expr = value_expr
-        self.body_expr = body_expr
+    name: str
+    value_expr: 'Expr'
+    body_expr: 'Expr'
 
+@dataclass
 class Name:
-    def __init__(self, name):
-        self.name = name
+    name: str
 
+@dataclass
 class Eq:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Lt:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class If:
-    def __init__(self, cond, then_branch, else_branch):
-        self.cond = cond
-        self.then_branch = then_branch
-        self.else_branch = else_branch
+    cond: 'Expr'
+    then_branch: 'Expr'
+    else_branch: 'Expr'
 
-# Domain-specific AST nodes for strings
+# --- Domain-specific String Expressions ---
+
+@dataclass
 class StrLit:
-    def __init__(self, value):
-        self.value = value
+    value: str
 
+@dataclass
 class Concat:
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    left: 'Expr'
+    right: 'Expr'
 
+@dataclass
 class Replace:
-    def __init__(self, source, old, new):
-        self.source = source
-        self.old = old
-        self.new = new
+    source: 'Expr'
+    old: 'Expr'
+    new: 'Expr'
 
+Expr = Lit | Add | Sub | Mul | Div | Neg | And | Or | Not | Let | Name | Eq | Lt | If | StrLit | Concat | Replace
 
 # --- Evaluation Logic ---
-def eval(expr, env={}):
+def eval(expr: Expr, env={}):
     match expr:
         case Lit(value=value):
             return value
@@ -121,21 +127,31 @@ def eval(expr, env={}):
             raise Exception("Neg: operand must be integer")
         case And(left=l, right=r):
             lval = eval(l, env)
-            if type(lval) is bool:
-                return lval and eval(r, env) if lval else False
-            raise Exception("And: operands must be booleans")
+            if type(lval) is not bool:
+                raise Exception("And: left operand must be boolean")
+            if not lval:
+                return False
+            rval = eval(r, env)
+            if type(rval) is not bool:
+                raise Exception("And: right operand must be boolean")
+            return rval
         case Or(left=l, right=r):
             lval = eval(l, env)
-            if type(lval) is bool:
-                return True if lval else eval(r, env)
-            raise Exception("Or: operands must be booleans")
+            if type(lval) is not bool:
+                raise Exception("Or: left operand must be boolean")
+            if lval:
+                return True
+            rval = eval(r, env)
+            if type(rval) is not bool:
+                raise Exception("Or: right operand must be boolean")
+            return rval
         case Not(expr=e):
             val = eval(e, env)
             if type(val) is bool: return not val
             raise Exception("Not: operand must be boolean")
-        case Let(name=name, value_expr=val_expr, body_expr=body):
+        case Let(name=n, value_expr=val_expr, body_expr=body):
             val = eval(val_expr, env)
-            new_env = env.copy(); new_env[name] = val
+            new_env = env.copy(); new_env[n] = val
             return eval(body, new_env)
         case Name(name=n):
             if n in env: return env[n]
@@ -163,13 +179,15 @@ def eval(expr, env={}):
         case _:
             raise Exception(f"Unknown expression: {expr}")
 
-
 # --- Runner ---
-def run(expr):
-    result = eval(expr)
-    print(result)
+def run(e: Expr) -> None:
+    print(f"running {e}")
+    try:
+        result = eval(e)
+        print(f"result: {result}")
+    except Exception as err:
+        print(f"error: {err}")
 
-# --- Domain Description and Test Cases ---
 """
 Domain: Strings
 This DSL enables basic string manipulation. It supports:
